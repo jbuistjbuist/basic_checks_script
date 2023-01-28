@@ -57,7 +57,7 @@ def get_order_IDs():
         return flat_values
     except HttpError as err:
         print(err)
-        return False
+        return
 
 
 def write_status_to_sheet(count, message):
@@ -70,4 +70,4 @@ def write_status_to_sheet(count, message):
         return True
     except HttpError as err:
         print(err)
-        return False
+        return
