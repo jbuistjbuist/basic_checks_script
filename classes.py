@@ -1,4 +1,4 @@
-class Order_Info:
+class Order:
   def __init__(variable, member_email, shipping_address=None, billing_address=None, paypal_email=None, paypal_verified=None):
     variable.shipping_address = shipping_address
     variable.member_email = member_email
@@ -29,4 +29,4 @@ class Ekata_Info:
 class Address_Check: 
   def __init__(variable, wpp_result, multi_unit):
     variable.wpp_result = wpp_result
-    variable.multi_unit - multi_unit
+    variable.multi_unit = multi_unit
