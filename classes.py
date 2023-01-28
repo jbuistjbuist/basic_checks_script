@@ -2,9 +2,16 @@ class Order:
   def __init__(variable, member_email, shipping_address=None, billing_address=None, paypal_email=None, paypal_verified=None):
     variable.shipping_address = shipping_address
     variable.member_email = member_email
-    variable.billing_address = billing_address if billing_address.address != shipping_address.address else None
+    variable.billing_address = billing_address
     variable.paypal_email = paypal_email
     variable.paypal_verified = paypal_verified
+
+  def check_sa_equals_ba(variable):
+    if variable.billing_address == None:
+      return True
+    if variable.billing_address.address == variable.shipping_address.address:
+      return True
+    return False
 
   
 

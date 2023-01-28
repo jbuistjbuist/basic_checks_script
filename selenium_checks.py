@@ -1,4 +1,5 @@
 from classes import *
+from pprint import pprint
 
 
 #test data
@@ -8,5 +9,6 @@ billing_address2 = Address('3511 Rue Ethel', 'Verdun', 'Quebec', 'H4G1R9', 'Jere
 
 sa_equals_ba = Order('jbuistjbuist@gmail.com', shipping_address, billing_address1)
 sa_not_ba = Order('jbuistjbuist@gmail.com', shipping_address, billing_address2)
-paypal_order = Order('jbuistjbuist@gmail.com', shipping_address, 'jeremy.j.buist@gmail.com', True)
+paypal_order = Order('jbuistjbuist@gmail.com', shipping_address, None, 'jeremy.j.buist@gmail.com', True)
+
 
