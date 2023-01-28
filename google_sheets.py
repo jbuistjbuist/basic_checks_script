@@ -6,6 +6,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+
 sheet_id = '1hbGwi3YoE3aNs37xBHospljYLzuGhDbjY7gna5Iqj0k'
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -32,6 +33,9 @@ def initialize_sheets():
         service = build('sheets', 'v4', credentials=creds)
         global sheet
         sheet = service.spreadsheets()
+        sheet.values().update(spreadsheetId=sheet_id, range='BOT review!B2',
+                              valueInputOption='USER_ENTERED', body={'values':  {'values': 'Script running...'}}).execute()
+        
     except HttpError as err:
         print(err)
 
