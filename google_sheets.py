@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os.path
 
 from google.auth.transport.requests import Request
@@ -9,12 +7,13 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 sheet_id = '1hbGwi3YoE3aNs37xBHospljYLzuGhDbjY7gna5Iqj0k'
-target_range = 'BOT review!A:A'
+read_range = 'BOT review!A:A'
+write_range = 'BOT review!B'
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 
-def getorderIDs():
+def initialize_sheets():
     creds = None
 
     if os.path.exists('token.json'):
@@ -33,18 +32,34 @@ def getorderIDs():
 
     try:
         service = build('sheets', 'v4', credentials=creds)
-
-        # Call the Sheets API
+        global sheet
         sheet = service.spreadsheets()
+    except HttpError as err:
+        print(err)
+
+
+def get_order_IDs():
+    try:
         result = sheet.values().get(spreadsheetId=sheet_id,
-                                    range=target_range).execute()
+                                    range=read_range).execute()
         values = result.get('values', [])
 
         if not values:
             print('No data found.')
             return
+        
+        flat_values = [item for l in values for item in l]
+        flat_values.remove(flat_values[0])
 
-        return values
+        return flat_values
+    except HttpError as err:
+        print(err)
 
+
+def write_status_to_sheet(count, message):
+    try:
+        range = write_range + str(count + 1)
+        sheet.values().update(spreadsheetId=sheet_id, range=range,
+                              valueInputOption='USER_ENTERED', body={ 'values': {'values' : message }}).execute()
     except HttpError as err:
         print(err)
