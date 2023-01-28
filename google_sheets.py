@@ -57,6 +57,7 @@ def get_order_IDs():
         return flat_values
     except HttpError as err:
         print(err)
+        return False
 
 
 def write_status_to_sheet(count, message):
@@ -66,5 +67,7 @@ def write_status_to_sheet(count, message):
 
         sheet.values().update(spreadsheetId=sheet_id, range=write_range,
                               valueInputOption='USER_ENTERED', body={'values':  message}).execute()
+        return True
     except HttpError as err:
         print(err)
+        return False

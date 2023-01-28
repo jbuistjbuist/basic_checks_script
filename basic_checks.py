@@ -11,4 +11,5 @@ for x in order_IDs:
   count += 1
   sheet_updates.append([f"{count * 2} bites the dust"])
   
-write_status_to_sheet(count, sheet_updates)
+if write_status_to_sheet(count, sheet_updates):
+  print("Script finished successfully, sheet updated")
