@@ -7,8 +7,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 sheet_id = '1hbGwi3YoE3aNs37xBHospljYLzuGhDbjY7gna5Iqj0k'
-read_range = 'BOT review!A:A'
-write_range = 'BOT review!B'
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
@@ -39,6 +37,7 @@ def initialize_sheets():
 
 
 def get_order_IDs():
+    read_range = 'BOT review!A:A'
     try:
         result = sheet.values().get(spreadsheetId=sheet_id,
                                     range=read_range).execute()
@@ -47,7 +46,7 @@ def get_order_IDs():
         if not values:
             print('No data found.')
             return
-        
+
         flat_values = [item for l in values for item in l]
         flat_values.remove(flat_values[0])
 
@@ -57,9 +56,11 @@ def get_order_IDs():
 
 
 def write_status_to_sheet(count, message):
+    write_range = 'BOT review!B2:B' + str(count + 1)
+
     try:
-        range = write_range + str(count + 1)
-        sheet.values().update(spreadsheetId=sheet_id, range=range,
-                              valueInputOption='USER_ENTERED', body={ 'values': {'values' : message }}).execute()
+
+        sheet.values().update(spreadsheetId=sheet_id, range=write_range,
+                              valueInputOption='USER_ENTERED', body={'values':  message}).execute()
     except HttpError as err:
         print(err)
