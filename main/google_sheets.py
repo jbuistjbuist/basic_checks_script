@@ -1,5 +1,5 @@
+import os
 import os.path
-
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -7,10 +7,12 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 
-sheet_id = '1hbGwi3YoE3aNs37xBHospljYLzuGhDbjY7gna5Iqj0k'
-
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
+sheet_id = os.getenv('sheet_id')
+read_range = os.getenv('read_range')
+write_range = os.getenv('write_range')
+status_range = os.gentenv('status_range')
 
 def initialize_sheets():
     creds = None
@@ -33,7 +35,7 @@ def initialize_sheets():
         service = build('sheets', 'v4', credentials=creds)
         global sheet
         sheet = service.spreadsheets()
-        sheet.values().update(spreadsheetId=sheet_id, range='BOT review!B2',
+        sheet.values().update(spreadsheetId=sheet_id, range=status_range,
                               valueInputOption='USER_ENTERED', body={'values':  {'values': 'Script running...'}}).execute()
         
     except HttpError as err:
@@ -41,7 +43,6 @@ def initialize_sheets():
 
 
 def get_order_IDs():
-    read_range = 'BOT review!A:A'
     try:
         result = sheet.values().get(spreadsheetId=sheet_id,
                                     range=read_range).execute()
@@ -61,11 +62,11 @@ def get_order_IDs():
 
 
 def write_status_to_sheet(count, message):
-    write_range = 'BOT review!B2:B' + str(count + 1)
+    range =  write_range + str(count + 1)
 
     try:
 
-        sheet.values().update(spreadsheetId=sheet_id, range=write_range,
+        sheet.values().update(spreadsheetId=sheet_id, range=range,
                               valueInputOption='USER_ENTERED', body={'values':  message}).execute()
         return True
     except HttpError as err:

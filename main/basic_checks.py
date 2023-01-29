@@ -1,4 +1,7 @@
-from google_sheets import get_order_IDs, initialize_sheets, write_status_to_sheet
+from main.google_sheets import get_order_IDs, initialize_sheets, write_status_to_sheet
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def main():
