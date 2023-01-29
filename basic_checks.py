@@ -1,9 +1,7 @@
-from main.google_sheets import get_order_IDs, initialize_sheets, write_status_to_sheet
-from dotenv import load_dotenv
+#import the google sheets functions made in the google_sheets file
+from scripts.google_sheets import get_order_IDs, initialize_sheets, write_status_to_sheet
 
-load_dotenv()
-
-
+#main flow of the project, this is the file to run when running the script
 def main():
 
   initialize_sheets()
@@ -30,7 +28,7 @@ def main():
         #sheets_updates.append(['failed 😰, manual review required'])
 
   
-  sheet_updates.append([f"{count * 2} bites the dust"])
+    sheet_updates.append([f"{count * 2} bites the dust"])
     
   if write_status_to_sheet(count, sheet_updates):
     print("Script completed, sheet updated")

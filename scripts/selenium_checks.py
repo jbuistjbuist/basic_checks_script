@@ -1,4 +1,4 @@
-from main.classes import *
+from classes import *
 from pprint import pprint
 
 
