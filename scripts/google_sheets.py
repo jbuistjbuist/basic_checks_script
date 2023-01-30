@@ -19,9 +19,9 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 #load information about the sheet ID and ranges from an environment file (using dotenv package) for added security
 sheet_id = os.getenv('sheet_id')
-read_range = os.getenv('read_range')
-write_range = os.getenv('write_range')
-status_range = os.getenv('status_range')
+write_range='BOT review!B2:B'
+read_range='BOT review!A:A'
+status_range='BOT review!B2'
 
 #log into google sheets with stored credentials, and post an update to the sheet that the script is running
 def initialize_sheets():

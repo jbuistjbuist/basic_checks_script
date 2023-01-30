@@ -1,10 +1,13 @@
 #import the google sheets functions made in the google_sheets file
 from scripts.google_sheets import get_order_IDs, initialize_sheets, write_status_to_sheet
+from scripts.selenium_checks import initialize_webdriver
+
 
 #main flow of the project, this is the file to run when running the script
 def main():
 
   initialize_sheets()
+  initialize_webdriver()
 
   order_IDs = get_order_IDs()
 
