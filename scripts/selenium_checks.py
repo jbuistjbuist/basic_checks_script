@@ -30,7 +30,7 @@ billing_address1 = Address(
 billing_address2 = Address('3511 Rue Ethel', 'Verdun',
                            'Quebec', 'H4G1R9', 'Jeremy', 'Buist')
 
-sa_equals_ba = Order('jbuistjbuist@gmail.com',
+sa_equals_ba = Order('jjbuist@gmail.com',
                      shipping_address, billing_address1)
 sa_not_ba = Order('jbuistjbuist@gmail.com', shipping_address, billing_address2)
 paypal_order = Order('jbuistjbuist@gmail.com', shipping_address,
