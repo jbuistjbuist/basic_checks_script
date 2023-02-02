@@ -47,7 +47,9 @@ chrome_drive = Service()
 driver = webdriver.Chrome(service=chrome_drive, options=chrome_options)
 driver.implicitly_wait(30)
 ekata_password = os.getenv("ekata_password")
+hqm_password = os.getenv("hqm_password")
 email = os.getenv("agent_email")
+hqm_username = os.getenv("hqm_username")
 
 
 def initialize_webdriver():
@@ -67,6 +69,25 @@ def initialize_webdriver():
     print('Ekata login OK')
   else:
     print('Ekata login failed, may be failing captcha test, script quitting')
+    quit()
+  
+  driver.switch_to.new_window('tab')
+  global hqm_window
+  hqm_window = driver.current_window_handle
+
+  driver.get('https://hqm.ssense.com/core/auth/login')
+
+  form = driver.find_element(By.ID, 'formAuthentication')
+  form.find_element(By.ID, 'username').send_keys(hqm_username)
+  form.find_element(By.ID, 'password').send_keys(hqm_password)
+  form.find_element(By.ID, 'connexion_btn').click()
+
+  time.sleep(3)
+
+  if driver.current_url == 'https://hqm.ssense.com/core/':
+    print('HQM login OK')
+  else: 
+    print('HQM login failed, script quitting')
     quit()
 
 
@@ -120,10 +141,19 @@ def perform_email_checks(email, dom_section):
 
 
 
+def get_hqm_details(id):
+  driver.switch_to.window(hqm_window)
+  driver.get(f'https://hqm.ssense.com/customer-support/master-order/edit/{id}')
+
+  print(driver.find_element(By.ID, 'c292_firstName').text)
+  return
 
 
 initialize_webdriver()
 
+get_hqm_details('188087741')
+
 get_ekata_info(sa_equals_ba)
 get_ekata_info(sa_not_ba)
 get_ekata_info(paypal_order)
+
