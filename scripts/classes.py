@@ -14,7 +14,7 @@ class Order:
         return False
 
     def __repr__(self):
-        return "Address shipping_address=% s member_email=% s billing_address=% s paypal_email=% s cc_f_name=% s cc_l_name=% s" % (self.shipping_address,
+        return "Order shipping_address=% s member_email=% s billing_address=% s paypal_email=% s cc_f_name=% s cc_l_name=% s" % (self.shipping_address,
                                                                                                                                    self.member_email,
                                                                                                                                    self.billing_address, self.paypal_email, self.cc_f_name,
                                                                                                                                    self.cc_l_name)
@@ -37,16 +37,28 @@ class Address:
 
 
 class Ekata_Info:
-    def __init__(self, member_email_check, shipping_details, billing_details=None, paypal_email_check=None):
+    def __init__(self, member_email_check, shipping_check, billing_check=None, paypal_email_check=None):
         self.member_email_check = member_email_check
-        self.shipping_details = shipping_details
-        self.billing_details = billing_details
+        self.shipping_check = shipping_check
+        self.billing_check = billing_check
         self.paypal_email_check = paypal_email_check
+
+    def __repr__(self):
+        return "Ekata_Info member_email_check=% s shipping_check=% s billing_check=% s paypal_email_check=% s" % (self.member_email_check, self.shipping_check,
+                                                                                                 self.billing_check, self.paypal_email_check)
 
 # for use in the ekata info object, defines how we will store the information gained from checking an address in ekata
 
 
 class Address_Check:
-    def __init__(self, wpp_result, multi_unit):
-        self.wpp_result = wpp_result
+    def __init__(self, sa_wpp, ba_wpp, multi_unit, cc_wpp=None, error=None):
+        self.sa_wpp = sa_wpp
+        self.ba_wpp = ba_wpp
+        self.cc_wpp = cc_wpp
+        self.error = error
         self.multi_unit = multi_unit
+
+    def __repr__(self):
+        return "Address_Check sa_wpp=% s ba_wpp=% s cc_wpp=% s error=% s multi_unit=% s"(self.sa_wpp, self.ba_wpp,
+                                                                                                 self.cc_wpp, self.error, self.multi_unit)
+

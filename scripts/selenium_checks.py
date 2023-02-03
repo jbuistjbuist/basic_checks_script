@@ -3,18 +3,6 @@ import os
 # import the classes defined in the classes file
 from classes import *
 
-# for debugging (printing complete objects to console)
-from pprint import pprint
-
-# selenium modules
-import os
-
-# import the classes defined in the classes file
-from classes import *
-
-# for debugging (printing complete objects to console)
-from pprint import pprint
-
 # selenium modules
 from selenium import webdriver
 from selenium.webdriver.support.select import Select
@@ -31,20 +19,19 @@ import time
 
 # import dotenv module to use env variables
 from dotenv import load_dotenv
-
 load_dotenv()
 
+#set driver options
 chrome_options = Options()
 chrome_options.add_argument('--start-maximized')
-
-# add this to driver initialization later to have headless chrome
 chrome_options.add_argument('--headless')
 
 # initialize chrome driver and env variables
-
 chrome_drive = Service()
 driver = webdriver.Chrome(service=chrome_drive, options=chrome_options)
 driver.implicitly_wait(30)
+
+#fetch env variables
 ekata_password = os.getenv("ekata_password")
 hqm_password = os.getenv("hqm_password")
 email = os.getenv("agent_email")
@@ -100,17 +87,25 @@ def initialize_webdriver():
 # function to get info from Ekata, based on provided order details
 def get_ekata_info(order):
 
+    #switch to correct window/tab and use the HTML base of the application as element to navigate
     driver.switch_to.window(ekata_window)
     app = driver.find_element(
         By.CLASS_NAME, 'css-1fe9b2j-ApplicationContainer')
 
+    #run check on member email (should always be present)
     member_email_check = perform_email_checks(order.member_email, app)
 
+    #if there is a paypal email, check it as well
     if (order.paypal_email):
         paypal_email_check = 'PayPal ' + \
             perform_email_checks(order.paypal_email, app)
         member_email_check = 'Member ' + member_email_check
 
+    #check shipping address (should always be present)
+
+    #if there is a billing address, check the billing address as well
+
+    #return Ekata_Info(...)
     print(member_email_check, paypal_email_check)
 
 
