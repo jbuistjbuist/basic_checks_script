@@ -59,6 +59,6 @@ class Address_Check:
         self.multi_unit = multi_unit
 
     def __repr__(self):
-        return "Address_Check sa_wpp=% s ba_wpp=% s cc_wpp=% s error=% s multi_unit=% s"(self.sa_wpp, self.ba_wpp,
+        return "Address_Check sa_wpp=% s ba_wpp=% s cc_wpp=% s error=% s multi_unit=% s" % (self.sa_wpp, self.ba_wpp,
                                                                                                  self.cc_wpp, self.error, self.multi_unit)
 

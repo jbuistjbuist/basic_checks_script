@@ -1,29 +1,31 @@
-#import operating system modules
+# import operating system modules
 import os
 import os.path
 
-#import google modules
+# import google modules
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-#import dotenv module to use env variables
+# import dotenv module to use env variables
 from dotenv import load_dotenv
 
 load_dotenv()
 
-#define authorization scope for the api request we will be making
+# define authorization scope for the api request we will be making
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-#load information about the sheet ID and ranges from an environment file (using dotenv package) for added security
+# load information about the sheet ID and ranges from an environment file (using dotenv package) for added security
 sheet_id = os.getenv('sheet_id')
-write_range='BOT review!B2:B'
-read_range='BOT review!A:A'
-status_range='BOT review!B2'
+write_range = 'BOT review!B2:F'
+read_range = 'BOT review!A:A'
+status_range = 'BOT review!G2:G3'
 
-#log into google sheets with stored credentials, and post an update to the sheet that the script is running
+# log into google sheets with stored credentials, and post an update to the sheet that the script is running
+
+
 def initialize_sheets():
     creds = None
 
@@ -46,13 +48,15 @@ def initialize_sheets():
         global sheet
         sheet = service.spreadsheets()
         sheet.values().update(spreadsheetId=sheet_id, range=status_range,
-                              valueInputOption='USER_ENTERED', body={'values':  {'values': 'Script running...'}}).execute()
+                              valueInputOption='USER_ENTERED', body={'values':  {'values': 'In Progress'}}).execute()
 
     except HttpError as err:
         print(err)
 
-#read the order IDs from the google sheet, flatten the list that comes back into a one-dimension list,
-#and return the list with the first cell (heading) removed
+# read the order IDs from the google sheet, flatten the list that comes back into a one-dimension list,
+# and return the list with the first cell (heading) removed
+
+
 def get_order_IDs():
     try:
         result = sheet.values().get(spreadsheetId=sheet_id,
@@ -71,8 +75,10 @@ def get_order_IDs():
         print(err)
         return
 
-#takes in the count of cells to update, and a two dimensional list object representing the updates for each cell
-#uses the google sheets api to post an update to the spreadsheet with all of the cell updates 
+# takes in the count of cells to update, and a two dimensional list object representing the updates for each cell
+# uses the google sheets api to post an update to the spreadsheet with all of the cell updates
+
+
 def write_status_to_sheet(count, messages):
     range = write_range + str(count + 1)
 
@@ -84,3 +90,8 @@ def write_status_to_sheet(count, messages):
     except HttpError as err:
         print(err)
         return
+
+
+def update_success():
+    sheet.values().update(spreadsheetId=sheet_id, range=status_range,
+                          valueInputOption='USER_ENTERED', body={'values':  {'values': 'Completed'}}).execute()
