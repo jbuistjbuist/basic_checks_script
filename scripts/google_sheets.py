@@ -11,21 +11,18 @@ from googleapiclient.errors import HttpError
 
 # import dotenv module to use env variables
 from dotenv import load_dotenv
-
 load_dotenv()
 
 # define authorization scope for the api request we will be making
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# load information about the sheet ID and ranges from an environment file (using dotenv package) for added security
+# load information about the sheet ID from .env file for security and ease of modification, and define ranges to read/write values
 sheet_id = os.getenv('sheet_id')
-write_range = 'BOT review!B2:F'
-read_range = 'BOT review!A:A'
-status_range = 'BOT review!G2:G3'
+write_range = 'ekata_review!B2:F'
+read_range = 'ekata_review!A:A'
+status_range = 'ekata_review!G2:G3'
 
 # log into google sheets with stored credentials, and post an update to the sheet that the script is running
-
-
 def initialize_sheets():
     creds = None
 
@@ -54,8 +51,6 @@ def initialize_sheets():
 
 # read the order IDs from the google sheet, flatten the list that comes back into a one-dimension list,
 # and return the list with the first cell (heading) removed
-
-
 def get_order_IDs():
     try:
         result = sheet.values().get(spreadsheetId=sheet_id,
@@ -74,12 +69,10 @@ def get_order_IDs():
         print(err)
         return
 
-# takes in the count of cells to update, and a two dimensional list object representing the updates for each cell
+# takes a two dimensional list object representing the updates for each cell
 # uses the google sheets api to post an update to the spreadsheet with all of the cell updates
-
-
 def write_updates_to_sheet(messages):
-    range = write_range 
+    range = write_range
 
     try:
 
@@ -90,7 +83,7 @@ def write_updates_to_sheet(messages):
         print(err)
         return
 
-
+# function to update the status cell of the sheet with a message
 def update_status(message):
     sheet.values().update(spreadsheetId=sheet_id, range=status_range,
                           valueInputOption='USER_ENTERED', body={'values':  {'values': f'{message}'}}).execute()
