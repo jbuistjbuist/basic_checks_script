@@ -9,15 +9,15 @@ class Order:
 
     # simple object method to return whether or not the shipping address is equal to the billing address
     def sa_equals_ba(self):
-        if self.billing_address == None or self.billing_address.address == self.shipping_address.address:
+        if self.billing_address == None or (self.billing_address.address == self.shipping_address.address and self.shipping_address.first_name == self.billing_address.first_name):
             return True
         return False
 
     def __repr__(self):
         return "Order shipping_address=% s member_email=% s billing_address=% s paypal_email=% s cc_f_name=% s cc_l_name=% s" % (self.shipping_address,
-                                                                                                                                   self.member_email,
-                                                                                                                                   self.billing_address, self.paypal_email, self.cc_f_name,
-                                                                                                                                   self.cc_l_name)
+                                                                                                                                 self.member_email,
+                                                                                                                                 self.billing_address, self.paypal_email, self.cc_f_name,
+                                                                                                                                 self.cc_l_name)
 
 
 # defines an object to store an address
@@ -32,4 +32,3 @@ class Address:
     def __repr__(self):
         return "Address first_name=% s last_name=% s address=% s postal_code=% s country=% s" % (self.first_name, self.last_name,
                                                                                                  self.address, self.postal_code, self.country)
-
