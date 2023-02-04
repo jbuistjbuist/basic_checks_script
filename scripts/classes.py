@@ -33,32 +33,3 @@ class Address:
         return "Address first_name=% s last_name=% s address=% s postal_code=% s country=% s" % (self.first_name, self.last_name,
                                                                                                  self.address, self.postal_code, self.country)
 
-# defines the object to store results from Ekata regarding an order
-
-
-class Ekata_Info:
-    def __init__(self, member_email_check, shipping_check, billing_check=None, paypal_email_check=None):
-        self.member_email_check = member_email_check
-        self.shipping_check = shipping_check
-        self.billing_check = billing_check
-        self.paypal_email_check = paypal_email_check
-
-    def __repr__(self):
-        return "Ekata_Info member_email_check=% s shipping_check=% s billing_check=% s paypal_email_check=% s" % (self.member_email_check, self.shipping_check,
-                                                                                                 self.billing_check, self.paypal_email_check)
-
-# for use in the ekata info object, defines how we will store the information gained from checking an address in ekata
-
-
-class Address_Check:
-    def __init__(self, sa_wpp, ba_wpp, multi_unit, cc_wpp=None, error=None):
-        self.sa_wpp = sa_wpp
-        self.ba_wpp = ba_wpp
-        self.cc_wpp = cc_wpp
-        self.error = error
-        self.multi_unit = multi_unit
-
-    def __repr__(self):
-        return "Address_Check sa_wpp=% s ba_wpp=% s cc_wpp=% s error=% s multi_unit=% s" % (self.sa_wpp, self.ba_wpp,
-                                                                                                 self.cc_wpp, self.error, self.multi_unit)
-

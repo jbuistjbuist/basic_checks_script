@@ -47,8 +47,7 @@ def initialize_sheets():
         service = build('sheets', 'v4', credentials=creds)
         global sheet
         sheet = service.spreadsheets()
-        sheet.values().update(spreadsheetId=sheet_id, range=status_range,
-                              valueInputOption='USER_ENTERED', body={'values':  {'values': 'In Progress'}}).execute()
+        update_status('In Progress')
 
     except HttpError as err:
         print(err)
@@ -79,8 +78,8 @@ def get_order_IDs():
 # uses the google sheets api to post an update to the spreadsheet with all of the cell updates
 
 
-def write_status_to_sheet(count, messages):
-    range = write_range + str(count + 1)
+def write_updates_to_sheet(messages):
+    range = write_range 
 
     try:
 
@@ -92,6 +91,6 @@ def write_status_to_sheet(count, messages):
         return
 
 
-def update_success():
+def update_status(message):
     sheet.values().update(spreadsheetId=sheet_id, range=status_range,
-                          valueInputOption='USER_ENTERED', body={'values':  {'values': 'Completed'}}).execute()
+                          valueInputOption='USER_ENTERED', body={'values':  {'values': f'{message}'}}).execute()

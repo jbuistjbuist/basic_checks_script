@@ -1,7 +1,8 @@
+# import OS to access system files
 import os
 
 # import the classes defined in the classes file
-from scripts.classes import *
+from classes import *
 
 # selenium modules
 from selenium import webdriver
@@ -21,24 +22,43 @@ import time
 from dotenv import load_dotenv
 load_dotenv()
 
-#set driver options
+# set driver options
 chrome_options = Options()
 chrome_options.add_argument('--start-maximized')
-chrome_options.add_argument('--headless')
+#chrome_options.add_argument('--headless')
+chrome_options.add_argument('--disable-notifications')
+
+# disable image loading to increase speed
+prefs = {"profile.managed_default_content_settings.images": 2}
+chrome_options.add_experimental_option("prefs", prefs)
 
 # initialize chrome driver and env variables
 chrome_drive = Service()
 driver = webdriver.Chrome(service=chrome_drive, options=chrome_options)
 driver.implicitly_wait(30)
 
-#fetch env variables
+# fetch env variables
 ekata_password = os.getenv("ekata_password")
 hqm_password = os.getenv("hqm_password")
 email = os.getenv("agent_email")
 hqm_username = os.getenv("hqm_username")
 
+# test data
 
+sa_equal_ba_no_info = Order(shipping_address=Address(first_name='Demardo', last_name='Broomes', address='Apt 307 Platinum Residence 1', postal_code='000000', country='United Arab Emirates'),
+                            member_email='demardo.broomes@hotmail.com', billing_address=None, paypal_email=None, cc_f_name=None, cc_l_name=None)
+
+sa_not_ba_info = Order(shipping_address=Address(first_name='Xinhua', last_name='Liu', address='39199 Rimrock Ranch Rd', postal_code='92592', country='United States'), member_email='m15950914087@gmail.com',
+                       billing_address=Address(first_name='Xinhua', last_name='Liu', address='39199 Rimrock Ranch Rd', postal_code='92592',  country='United States'), paypal_email=None, cc_f_name='Jinfei', cc_l_name='Liu')
+
+cc_baissa_namefail = Order(shipping_address=Address(first_name='Yuanyuan', last_name='Zhang', address='540 Selma Street Apt 515C', postal_code='31401',
+                           country='United States'), member_email='beyuna0204@gmail.com', billing_address=None, paypal_email=None, cc_f_name='name_parse_fail', cc_l_name='name_parse_fail')
+
+sa_not_ba_info2 = Order(shipping_address=Address(first_name='Lexie', last_name='Baker', address='114 N Lorel Ave', postal_code='60644', country='United States'), member_email='bakershalexus@yahoo.com',
+                        billing_address=Address(first_name='Lexie', last_name='Baker', address='114 N Lorel', postal_code='60624', country='United States'), paypal_email=None, cc_f_name='Shalexus', cc_l_name='Baker')
 # this function opens an HQM and Ekata tab and logs into both. If login fails, will quit the script
+
+
 def initialize_webdriver():
 
     # ekata sign in
@@ -63,62 +83,77 @@ def initialize_webdriver():
         quit()
 
     # HQM sign in
-    driver.switch_to.new_window('tab')
-    global hqm_window
-    hqm_window = driver.current_window_handle
+    # driver.switch_to.new_window('tab')
+    # global hqm_window
+    # hqm_window = driver.current_window_handle
 
-    driver.get('https://hqm.ssense.com/core/auth/login')
+    # driver.get('https://hqm.ssense.com/core/auth/login')
 
-    form = driver.find_element(By.ID, 'formAuthentication')
-    form.find_element(By.ID, 'username').send_keys(hqm_username)
-    form.find_element(By.ID, 'password').send_keys(hqm_password)
-    form.find_element(By.ID, 'connexion_btn').click()
+    # form = driver.find_element(By.ID, 'formAuthentication')
+    # form.find_element(By.ID, 'username').send_keys(hqm_username)
+    # form.find_element(By.ID, 'password').send_keys(hqm_password)
+    # form.find_element(By.ID, 'connexion_btn').click()
 
-    time.sleep(3)
+    # time.sleep(3)
 
-    # if redirected to correct page, success, otherwise, fail
-    if driver.current_url == 'https://hqm.ssense.com/core/':
-        print('HQM login OK')
-    else:
-        print('HQM login failed, script quitting')
-        quit()
+    # # if redirected to correct page, success, otherwise, fail
+    # if driver.current_url == 'https://hqm.ssense.com/core/':
+    #     print('HQM login OK')
+    # else:
+    #     print('HQM login failed, script quitting')
+    #     quit()
 
 
 # function to get info from Ekata, based on provided order details
 def get_ekata_info(order):
 
-    #switch to correct window/tab and use the HTML base of the application as element to navigate
+    # switch to correct window/tab and use the HTML base of the application as element to navigate
     driver.switch_to.window(ekata_window)
     app = driver.find_element(
         By.CLASS_NAME, 'css-1fe9b2j-ApplicationContainer')
 
-    #run check on member email (should always be present)
-    member_email_check = perform_email_checks(order.member_email, app)
+    # run check on member email (should always be present)
+    member_email_check = perform_email_check(order.member_email, app)
+    paypal_email_check = None
 
-    #if there is a paypal email, check it as well
-    if (order.paypal_email):
+    # if there is a paypal email, check it as well
+    if order.paypal_email:
         paypal_email_check = 'PayPal ' + \
-            perform_email_checks(order.paypal_email, app)
+            perform_email_check(order.paypal_email, app)
         member_email_check = 'Member ' + member_email_check
 
-    #check shipping address (should always be present)
+    if not paypal_email_check:
+        paypal_email_check = 'N/A'
 
-    #if there is a billing address, check the billing address as well
+    # check shipping address (should always be present)
+    sa_check = perform_address_check(order.shipping_address, app)
 
-    #return Ekata_Info(...)
+    # multi_unit = sa_check[1]
+    # shipping_check = sa_check[0]
+
+    ba_check = 'N/A'
+
+    if order.billing_address and not order.sa_equals_ba():
+        ba_check = perform_address_check(order.billing_address, app)
+        
+
+    # return [member_email, paypal_email, shipping_check, multi_unit, billing_check]
+
     print(member_email_check, paypal_email_check)
 
 
 # function to perform Ekata email check, for a given email and HTML section
-def perform_email_checks(email, dom_section):
+def perform_email_check(email, dom_section):
 
     driver.implicitly_wait(5)
     dom_section.find_element(By.XPATH, "//a[text()='Email']").click()
-    email_input = dom_section.find_element(By.NAME, 'email')
+
+    form = dom_section.find_element(By.TAG_NAME, 'form')
+    email_input = form.find_element(By.ID, 'email')
     email_input.send_keys(Keys.COMMAND, 'a')
     email_input.send_keys(Keys.DELETE)
     email_input.send_keys(email)
-    dom_section.find_element(
+    form.find_element(
         By.CLASS_NAME, 'css-uw1vjm-StyledButton-primary').click()
 
     try:
@@ -142,10 +177,51 @@ def perform_email_checks(email, dom_section):
         domain_reputation = dom_section.find_element(
             By.XPATH, '//div[3]/div[4]/div[2]').text
 
-        return f'Email - Validity: {email_validity}, Online Presence: {online_presence}, Creation: {creation}, Domain: {domain_reputation}'
+        return f'Validity: {email_validity}, Online Presence: {online_presence}, Creation: {creation}, Domain: {domain_reputation}'
 
     except NoSuchElementException:
-        return 'Email - check Failed, please review manually'
+        return 'Manual'
+
+
+def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, ba_f_name=None, ba_l_name=None, cc_f_name=None, cc_l_name=None):
+    driver.implicitly_wait(1)
+    dom_section.find_element(
+        By.CSS_SELECTOR, '.css-17zawny-MenuItem:nth-child(4) > a').click()
+    form = dom_section.find_element(By.TAG_NAME, 'form')
+    form.find_element(By.CSS_SELECTOR, 'button[type="reset"]').click()
+    form.find_element(By.ID, 'street').send_keys(address.address)
+    form.find_element(By.ID, 'where').send_keys(address.postal_code)
+    form.find_element(By.ID, 'countryCode').send_keys(address.country)
+    form.find_element(By.CSS_SELECTOR, 'button[type="submit"]').click()
+
+    street_view = None
+    sa_name_check = None
+    ba_name_check = None
+    cc_name_check = None
+
+    try:
+        error = form.find_element(By.CLASS_NAME, 'e1u7f1f03').text
+        if error:
+            print(error)
+            return [error, 'N/A']
+    except:
+        result = dom_section.find_element(By.CLASS_NAME, 'e81606332')
+
+        try: 
+            street_view = result.find_element(By.PARTIAL_LINK_TEXT, 'Street').get_attribute('href')
+        except: 
+            street_view = None
+
+
+    print('street view', street_view)
+
+
+    
+        
+
+
+
+
 
 
 # function which takes in an order id, and retrieves the order details for a provided order
@@ -273,7 +349,18 @@ def get_hqm_details(id):
         return False
 
 
-# initialize_webdriver()
+def quit_webdriver():
+    driver.quit()
+
+
+start_time = time.time()
+initialize_webdriver()
+get_ekata_info(sa_equal_ba_no_info)
+get_ekata_info(sa_not_ba_info)
+get_ekata_info(sa_not_ba_info2)
+get_ekata_info(cc_baissa_namefail)
+print("--- %s seconds images blocked headless ---" %
+      (time.time() - start_time))
 
 
 # list = ['217054771', '225981941', '219487021', '225199831', '225463951', '224319711',
@@ -306,4 +393,3 @@ def get_hqm_details(id):
 
 # for order in list:
 #     print(get_hqm_details(order))
-
