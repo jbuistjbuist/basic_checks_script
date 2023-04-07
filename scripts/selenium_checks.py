@@ -21,7 +21,7 @@ from selenium.common.exceptions import NoSuchElementException
 # function to pause the code for set num of seconds
 import time
 
-#import regular expressions module
+# import regular expressions module
 import re
 
 # import dotenv module to use env variables
@@ -128,7 +128,6 @@ def get_ekata_info(order, zendesk):
             ba_f_name = order.billing_address.first_name
             ba_l_name = order.billing_address.last_name
 
-
         # perform check of shipping address
 
         sa_check = perform_address_check(
@@ -145,7 +144,7 @@ def get_ekata_info(order, zendesk):
         if order.billing_address and (order.billing_address != 'error') and not order.sa_equals_ba():
             ba_check = perform_address_check(
                 order.billing_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name)
-            
+
             ba_multi_unit = ba_check[1]
             ba_street_view = ba_check[2]
             billing_check = ba_check[0]
@@ -153,37 +152,37 @@ def get_ekata_info(order, zendesk):
         if order.billing_address == 'error':
             billing_check = 'Error - Review Manually'
 
-
         zillow_query_sa = "🔎"
         zillow_ss_sa = "🔎"
         zillow_query_ba = ''
         zillow_ss_ba = ''
 
-        #if the SA is us or canada, generate a zillow link
+        # if the SA is us or canada, generate a zillow link
 
         if order.shipping_address.country == 'United States' or order.shipping_address.country == 'Canada':
-            
-            zillow_query_sa = make_zillow_link(order.shipping_address.address, order.shipping_address.postal_code)
+
+            zillow_query_sa = make_zillow_link(
+                order.shipping_address.address, order.shipping_address.postal_code)
             zillow_ss_sa = f'=HYPERLINK("{zillow_query_sa}", "💸")'
 
-        #if theres a seperate BA, generate a zillow link if the BA is in US or Canada
+        # if theres a seperate BA, generate a zillow link if the BA is in US or Canada
 
         if order.billing_address and (order.billing_address != 'error') and not order.sa_equals_ba():
 
             if order.billing_address.country == 'United States' or order.billing_address.country == 'Canada':
-            
-                zillow_query_ba = make_zillow_link(order.billing_address.address, order.billing_address.postal_code)
+
+                zillow_query_ba = make_zillow_link(
+                    order.billing_address.address, order.billing_address.postal_code)
                 zillow_ss_ba = f'=HYPERLINK("{zillow_query_ba}", "💸")'
 
             else:
                 zillow_query_ba = '🔎'
                 zillow_ss_ba = '🔎'
-                
 
         if zendesk:
 
             return [member_email_check, paypal_email_check, shipping_check, sa_street_view, sa_multi_unit, zillow_query_sa, billing_check, ba_street_view, ba_multi_unit, zillow_query_ba]
-        
+
         else:
 
             return [member_email_check, paypal_email_check, shipping_check, sa_street_view, sa_multi_unit, zillow_ss_sa, billing_check, ba_street_view, ba_multi_unit, zillow_ss_ba]
@@ -192,7 +191,9 @@ def get_ekata_info(order, zendesk):
         print(e)
         return False
 
-#helper function to make a zillow search link from address line and postal code (put address and postal code together with hyphens, try to remove special characters, and add it to the url)
+# helper function to make a zillow search link from address line and postal code (put address and postal code together with hyphens, try to remove special characters, and add it to the url)
+
+
 def make_zillow_link(address, postal_code):
     zillow_base_link = 'https://www.zillow.com/homes/'
     zillow_search_raw = address + ' ' + postal_code
@@ -200,7 +201,6 @@ def make_zillow_link(address, postal_code):
     zillow_search_term = zillow_search_raw.split(" ")
     zillow_search_term = "-".join(zillow_search_term)
     return zillow_base_link + zillow_search_term
-    
 
 
 # function to perform Ekata email check, for a given email and HTML section
@@ -210,7 +210,7 @@ def perform_email_check(email, dom_section):
     dom_section.find_element(By.XPATH, "//a[text()='Email']").click()
 
     try:
-        
+
         form = dom_section.find_element(By.TAG_NAME, 'form')
         email_input = form.find_element(By.ID, 'email')
         email_input.send_keys(Keys.COMMAND, 'a')
@@ -219,7 +219,6 @@ def perform_email_check(email, dom_section):
         form.find_element(
             By.CLASS_NAME, 'css-uw1vjm-StyledButton-primary').click()
 
-    
         email_validity = dom_section.find_element(
             By.XPATH, '//div[2]/div[2]/div[2]').text
         online_presence_html = dom_section.find_element(
@@ -269,38 +268,38 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
     cc_name_check = None
     multi_unit = ''
 
-
     # try to get street view and multi unit information first
     try:
         street_view = driver.find_element(
-                By.PARTIAL_LINK_TEXT, 'Street view').get_attribute('href')
+            By.PARTIAL_LINK_TEXT, 'Street view').get_attribute('href')
         street_view = f'=HYPERLINK("{street_view}", "📍")'
-    
+
     except:
         street_view = "🔎"
 
     try:
         driver.implicitly_wait(0)
         multi_unit = driver.find_element(
-                By.CSS_SELECTOR, '.e81606331 .e81606327 > .e81606326:last-of-type > span:last-of-type').text
+            By.CSS_SELECTOR, '.e81606331 .e81606327 > .e81606326:last-of-type > span:last-of-type').text
 
         if multi_unit == "Multi-unit":
             multi_unit = '🏬'
-            
+
         elif multi_unit == "Single-unit":
             multi_unit = '🏠'
 
         else:
             multi_unit = "🔎"
-            
+
     except:
         multi_unit = "🔎"
-            
+
     # return an error if error message appears
     try:
         driver.implicitly_wait(0.5)
-        error = form.find_element(By.CLASS_NAME, 'css-1cxasnz-StyledErrorMessage').text
-        
+        error = form.find_element(
+            By.CLASS_NAME, 'css-1cxasnz-StyledErrorMessage').text
+
         if error:
             return [error, multi_unit, street_view]
 
@@ -309,16 +308,15 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
 
         result = None
 
-        #try to get the container element of the results section, else return an error
+        # try to get the container element of the results section, else return an error
 
         try:
-            
-            result = dom_section.find_element(By.CLASS_NAME, 'e81606332')
-            
-        except:
-            
-            return ['Error - Review Manually', multi_unit, street_view]
 
+            result = dom_section.find_element(By.CLASS_NAME, 'e81606332')
+
+        except:
+
+            return ['Error - Review Manually', multi_unit, street_view]
 
         # get results section as a variable
         matches = dom_section.find_element(
@@ -330,7 +328,8 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
         # in this try block, we try to get a list of all the names matched by ekata for the address,
         # if these elements dont exist we say there is no subscriber info
         try:
-            matches.find_element(By.CSS_SELECTOR, '.css-1o61uci-PanelTitleContainer')
+            matches.find_element(
+                By.CSS_SELECTOR, '.css-1o61uci-PanelTitleContainer')
             names = []
             driver.implicitly_wait(0.5)
 
@@ -383,9 +382,9 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
             sa_done = False
             ba_done = False
             cc_done = False
-            
+
             for name in names:
-                
+
                 if not sa_done:
                     result = search_match(sa_f_name, sa_l_name, name)
                     if result:
@@ -400,16 +399,12 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
                         if result == 'F':
                             ba_done = True
 
-
                 if cc_l_name and (cc_l_name != 'name_parse_fail') and not cc_done:
                     result = search_match(cc_f_name, cc_l_name, name)
                     if result:
                         cc_name_check = f'CC Name: {result}'
                         if result == 'F':
                             cc_done = True
-
-                
-        
 
             # if a billing address name was not provided it is N/A
             if not ba_l_name:
@@ -434,33 +429,32 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
             if not sa_name_check:
                 sa_name_check = 'SA Name: N'
 
-            
+            # return all da info
 
-            #return all da info
-            
             return [f'{sa_name_check} | {cc_name_check} | {ba_name_check}', multi_unit, street_view]
-        
 
         # if there were no results at all, return the below
         except:
 
-            return["No Subscriber Info", multi_unit, street_view]
-            
+            return ["No Subscriber Info", multi_unit, street_view]
 
 
-#function that uses regular expressions to match names from HQM to names from ekata
+# function that uses regular expressions to match names from HQM to names from ekata
 def search_match(first_name, last_name, string_to_search):
-  last_name_match = re.search(f'(\ |\-){last_name}($|\ |,|\-)', string_to_search, re.I)
-  full_name_match = re.search(f'(^|\ ){first_name}\ {last_name}($|\ |,|\-)', string_to_search, re.I)
-  if not full_name_match:
-    full_name_match = re.search(f'(^|\ ){first_name}(\ |\-|,).*(\ |\-){last_name}($|\ |,|\-)', string_to_search, re.I)
+    last_name_match = re.search(
+        f'(\ |\-){last_name}($|\ |,|\-)', string_to_search, re.I)
+    full_name_match = re.search(
+        f'(^|\ ){first_name}\ {last_name}($|\ |,|\-)', string_to_search, re.I)
+    if not full_name_match:
+        full_name_match = re.search(
+            f'(^|\ ){first_name}(\ |\-|,).*(\ |\-){last_name}($|\ |,|\-)', string_to_search, re.I)
 
-  if full_name_match:
-    return 'F'
-  elif last_name_match:
-    return 'P'
-  else:
-    return None
+    if full_name_match:
+        return 'F'
+    elif last_name_match:
+        return 'P'
+    else:
+        return None
 
 
 # function to remove honorifics etc. from names, takes in name and boolean of whether it is a full name (first and last), or one name
@@ -479,14 +473,12 @@ def format_name(name, last_name=True):
 
     name = name.strip()
     name = re.split('\-|\ ', name)
-    if last_name:    
+    if last_name:
         name = name[len(name) - 1]
     else:
         name = name[0]
 
     return name.strip().lower()
-
-                            
 
 
 # function which takes in an order id, and retrieves the order details for a provided order
@@ -518,103 +510,35 @@ def get_hqm_details(id):
         try:
 
             driver.implicitly_wait(0.2)
-
-            first_name_html = shipping_field.find_element(
-                By.ID, 'c292_firstName')
-            first_name = first_name_html.get_attribute('value')
-            first_name = format_name(first_name, last_name=False)
-            last_name = shipping_field.find_element(
-                By.ID, 'c292_lastName').get_attribute('value')
-            last_name = format_name(last_name, last_name=True)
-            address = shipping_field.find_element(
-                By.ID, 'c292_address').get_attribute('value')
-            postal_code = shipping_field.find_element(
-                By.ID, 'c292_postalCode').get_attribute('value')
-            country_select = Select(shipping_field.find_element(
-                By.ID, 'c292_countryID')).first_selected_option
-            country = country_select.text
-
-            shipping_address = Address(
-                address, country, postal_code, first_name, last_name)
-
+            shipping_address = get_hqm_address(shipping_field, 'c292')
             driver.implicitly_wait(15)
 
         except NoSuchElementException:
 
             driver.implicitly_wait(15)
-
-            first_name = shipping_field.find_element(
-                By.ID, 'c293_firstName').get_attribute('value')
-            first_name = format_name(first_name, last_name=False)
-            last_name = shipping_field.find_element(
-                By.ID, 'c293_lastName').get_attribute('value')
-            last_name = format_name(last_name, last_name=True)
-            address = shipping_field.find_element(
-                By.ID, 'c293_address').get_attribute('value')
-            postal_code = shipping_field.find_element(
-                By.ID, 'c293_postalCode').get_attribute('value')
-            country_select = Select(shipping_field.find_element(
-                By.ID, 'c293_countryID')).first_selected_option
-            country = country_select.text
-
-            shipping_address = Address(
-                address, country, postal_code, first_name, last_name)
+            shipping_address = get_hqm_address(shipping_field, 'c293')
 
         # if billing not same as shipping, get the billing address details
         if not (driver.find_element(By.ID, 'sameAsShipping').is_selected()):
-            
-            #find this to make sure its loaded first
+
+            # find this to make sure its loaded first
             driver.find_element(By.ID, 'shipping-address-book-btn')
 
             billing_field = driver.find_element(
-            By.CSS_SELECTOR, '.billing.box-address')
+                By.CSS_SELECTOR, '.billing.box-address')
 
-              # try to get billing details, billing fields can have c291 or c292 classes so check both
-
+            # try to get billing details, billing fields can have c291 or c292 classes so check both
             driver.implicitly_wait(0.2)
 
             try:
 
-                first_name = billing_field.find_element(
-                    By.ID, 'c291_firstName').get_attribute('value')
-                first_name = format_name(first_name, last_name=False)
-                last_name = billing_field.find_element(
-                    By.ID, 'c291_lastName').get_attribute('value')
-                last_name = format_name(last_name, last_name=True)
-                address = billing_field.find_element(
-                    By.ID, 'c291_address').get_attribute('value')
-                postal_code = billing_field.find_element(
-                    By.ID, 'c291_postalCode').get_attribute('value')
-                country_select = Select(billing_field.find_element(
-                    By.ID, 'c291_countryID')).first_selected_option
-                country = country_select.text
-
-                billing_address = Address(
-                    address, country, postal_code, first_name, last_name)
-
+                billing_address = get_hqm_address(billing_field, 'c293')
                 driver.implicitly_wait(15)
-                
+
             except NoSuchElementException:
 
                 driver.implicitly_wait(15)
-
-                first_name = billing_field.find_element(
-                    By.ID, 'c292_firstName').get_attribute('value')
-                first_name = format_name(first_name, last_name=False)
-                last_name = billing_field.find_element(
-                    By.ID, 'c292_lastName').get_attribute('value')
-                last_name = format_name(last_name, last_name=True)
-                address = billing_field.find_element(
-                    By.ID, 'c292_address').get_attribute('value')
-                postal_code = billing_field.find_element(
-                    By.ID, 'c292_postalCode').get_attribute('value')
-                country_select = Select(billing_field.find_element(
-                    By.ID, 'c292_countryID')).first_selected_option
-                country = country_select.text
-
-                billing_address = Address(
-                    address, country, postal_code, first_name, last_name)
-                
+                billing_address = get_hqm_address(billing_field, 'c292')
 
         # determine if it is a paypal, applepay, or cc order and get the appropriate info from the payments table
         table = driver.find_element(
@@ -625,10 +549,10 @@ def get_hqm_details(id):
 
             cc_full_name = table.find_element(
                 By.CSS_SELECTOR, 'tr:nth-of-type(2) > td:nth-child(5)').text
-    
+
             seperated = cc_full_name.split(' ')
             if (len(seperated) >= 2):
-                
+
                 cc_f_name = seperated[0]
                 cc_l_name = seperated[len(seperated) - 1]
                 cc_f_name = format_name(cc_f_name, False)
@@ -647,8 +571,30 @@ def get_hqm_details(id):
 
        # if anything goes wrong and is uncaught, return false and print a message
     except Exception as e:
-        print("getting order " + id + " details fail, will try up to three times and output a blank row if not done")
+        print("getting order " + id +
+              " details fail, will try up to three times and output a blank row if not done")
         return False
+
+
+def get_hqm_address(field, css_id):
+
+    first_name_html = field.find_element(
+        By.ID, f'{css_id}_firstName')
+    first_name = first_name_html.get_attribute('value')
+    first_name = format_name(first_name, last_name=False)
+    last_name = field.find_element(
+        By.ID, f'{css_id}_lastName').get_attribute('value')
+    last_name = format_name(last_name, last_name=True)
+    address = field.find_element(
+        By.ID, f'{css_id}_address').get_attribute('value')
+    postal_code = field.find_element(
+        By.ID, f'{css_id}_postalCode').get_attribute('value')
+    country_select = Select(field.find_element(
+        By.ID, f'{css_id}_countryID')).first_selected_option
+    country = country_select.text
+
+    return Address(
+        address, country, postal_code, first_name, last_name)
 
 
 def quit_webdriver():
