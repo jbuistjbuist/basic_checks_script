@@ -48,14 +48,10 @@ def main():
             continue
 
         try:
-            sa_map = check_info[3].replace('=HYPERLINK("', "")
-            sa_map = sa_map.replace('", "📍")', "")
-            ba_map = check_info[7].replace('=HYPERLINK("', "")
-            ba_map = ba_map.replace('", "📍")', "")
-            comment = f' \n *Order {order_id}* \n --- \n **Member Email:** {check_info[0]}\n **PayPal Email:** {check_info[1] or "N/A"}\n --- \n **SA WPP:** {check_info[2]}\n **SA Map:** {sa_map or "N/A"}\n **SA Multi-unit:** {check_info[4]} \n **SA Zillow:** {check_info[5] or "N/A"}\n --- \n'
+            comment = f' \n *Order {order_id}* \n --- \n **Member Email:** {check_info[0]}\n **PayPal Email:** {check_info[1] or "N/A"}\n --- \n **SA WPP:** {check_info[2]}\n **SA Map:** {check_info[3] or "N/A"}\n **SA Multi-unit:** {check_info[4]} \n **SA Zillow:** {check_info[5] or "N/A"}\n --- \n'
             
             if (check_info[6] != "SA = BA"):
-                comment = comment + f'**BA WPP:** {check_info[6]}\n **BA Map:** {ba_map or "N/A"} \n **BA Multi-unit:** {check_info[8] or "N/A"} \n **BA Zillow:** {check_info[9] or "N/A"}\n --- \n'
+                comment = comment + f'**BA WPP:** {check_info[6]}\n **BA Map:** {check_info[7] or "N/A"} \n **BA Multi-unit:** {check_info[8] or "N/A"} \n **BA Zillow:** {check_info[9] or "N/A"}\n --- \n'
 
             update_ticket(ticket, comment)
             update_check_outcome(count, "Posted")

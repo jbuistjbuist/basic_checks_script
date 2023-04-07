@@ -14,8 +14,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 
 # function to pause the code for set num of seconds
@@ -131,7 +129,7 @@ def get_ekata_info(order, zendesk):
         # perform check of shipping address
 
         sa_check = perform_address_check(
-            order.shipping_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name)
+            order.shipping_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name, zendesk)
 
         sa_multi_unit = sa_check[1]
         sa_street_view = sa_check[2]
@@ -143,7 +141,7 @@ def get_ekata_info(order, zendesk):
 
         if order.billing_address and (order.billing_address != 'error') and not order.sa_equals_ba():
             ba_check = perform_address_check(
-                order.billing_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name)
+                order.billing_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name, zendesk)
 
             ba_multi_unit = ba_check[1]
             ba_street_view = ba_check[2]
@@ -247,7 +245,7 @@ def perform_email_check(email, dom_section):
 # function to check one address for multiunit, streetview link, and name matches
 
 
-def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, ba_f_name=None, ba_l_name=None, cc_f_name=None, cc_l_name=None):
+def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, ba_f_name=None, ba_l_name=None, cc_f_name=None, cc_l_name=None, zendesk=False):
 
     driver.implicitly_wait(2.6)
     # navigate to the address page
@@ -272,7 +270,9 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
     try:
         street_view = driver.find_element(
             By.PARTIAL_LINK_TEXT, 'Street view').get_attribute('href')
-        street_view = f'=HYPERLINK("{street_view}", "📍")'
+        
+        if not zendesk:
+            street_view = f'=HYPERLINK("{street_view}", "📍")'
 
     except:
         street_view = "🔎"
