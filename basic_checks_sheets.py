@@ -10,19 +10,28 @@ from scripts.csv_write import write_updates_to_file
 # import to time how long it takes
 import time
 
+# get the users selection of which rows to run
+def get_user_selection():
+
+    range = input("\nSpecify row range to process (start number to end number e.g. 2 202). Do not include row 1. If only start value is \
+                         included, script will process all remaining orders beginning from start value.\n\n")
+    range = range.strip()
+    range = range.split(" ")
+    begin = range[0]
+    end = None
+
+    if len(range) == 2:
+      end = range[1]
+    
+    return [begin, end]
+
 
 # main flow of the project, function that is run when running the script (python3 basic_checks.py)
 def main():
 
     #prompt the user to provide a range of rows to read
 
-    range = input("\nSpecify row range to process (start number to end number e.g. 2 202). Do not include row 1. If only start value is included, script will process all remaining orders beginning from start value.\n\n")
-    range = range.strip()
-    range = range.split(" ")
-    begin = range[0]
-    end = None
-    if len(range) == 2:
-      end = range[1]
+    range = get_user_selection()
     
 
     start = time.time()
@@ -32,7 +41,7 @@ def main():
     initialize_webdriver()
     
 
-    order_IDs = get_order_IDs(begin, end)
+    order_IDs = get_order_IDs(range[0], range[1])
     cell_table = []
     count = 0
     num_of_orders = len(order_IDs)
@@ -51,7 +60,7 @@ def main():
             order = get_hqm_details(id)
 
         if not order:
-            cell_table.append(['', '', '', '', '', '', '', ''])
+            cell_table.append(['', '', '', '', '', '', '', '', '', ''])
             continue
 
         check_info = False
@@ -62,7 +71,7 @@ def main():
             check_info = get_ekata_info(order, zendesk=False)
 
         if not (check_info):
-            cell_table.append(['', '', '', '', '', '', '', ''])
+            cell_table.append(['', '', '', '', '', '', '', '', '', ''])
             continue
         
         cell_table.append(check_info)
@@ -80,7 +89,7 @@ def main():
         except Exception as e:
             print(e, "Error writing to file, will try to write to google sheet")
         
-        write_updates_to_sheet(cell_table, begin)
+        write_updates_to_sheet(cell_table, range[0])
         end = time.time()
         
         update_status('Completed')

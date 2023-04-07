@@ -18,7 +18,6 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 # load information about the sheet ID from .env file for security and ease of modification, and define ranges to read/write values
 sheet_id = os.getenv('sheet_id')
-status_range = 'ekata_review!L2:L3'
 
 # log into google sheets with stored credentials, and post an update to the sheet that the script is running
 def initialize_sheets():
@@ -86,6 +85,7 @@ def write_updates_to_sheet(messages, start):
 
 # function to update the status cell of the sheet with a message
 def update_status(message):
+    status_range = 'ekata_review!L2:L3'
     sheet.values().update(spreadsheetId=sheet_id, range=status_range,
                           valueInputOption='USER_ENTERED', body={'values':  {'values': f'{message}'}}).execute()
 

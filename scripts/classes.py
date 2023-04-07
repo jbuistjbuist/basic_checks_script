@@ -9,7 +9,6 @@ class Order:
         self.cc_l_name = cc_l_name
 
     # simple object method to return whether or not the shipping address is equal to the billing address.
-    # since we are interested in checking names, the address is not considered equivalent if the first name is different
     def sa_equals_ba(self):
         if self.billing_address == None or (self.billing_address.address == self.shipping_address.address):
             return True
