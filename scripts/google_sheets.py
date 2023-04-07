@@ -18,9 +18,7 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 # load information about the sheet ID from .env file for security and ease of modification, and define ranges to read/write values
 sheet_id = os.getenv('sheet_id')
-write_range = 'ekata_review!B2:F'
-read_range = 'ekata_review!A:A'
-status_range = 'ekata_review!G2:G3'
+status_range = 'ekata_review!L2:L3'
 
 # log into google sheets with stored credentials, and post an update to the sheet that the script is running
 def initialize_sheets():
@@ -44,17 +42,20 @@ def initialize_sheets():
         service = build('sheets', 'v4', credentials=creds)
         global sheet
         sheet = service.spreadsheets()
-        update_status('In Progress')
 
     except HttpError as err:
         print(err)
 
 # read the order IDs from the google sheet, flatten the list that comes back into a one-dimension list,
 # and return the list with the first cell (heading) removed
-def get_order_IDs():
+def get_order_IDs(start, end):
     try:
+        range = 'ekata_review!A' + start + ':A'
+        if end:
+            range = range + end
+        
         result = sheet.values().get(spreadsheetId=sheet_id,
-                                    range=read_range).execute()
+                                    range=range).execute()
         values = result.get('values', [])
 
         if not values:
@@ -62,7 +63,6 @@ def get_order_IDs():
             return
 
         flat_values = [item for l in values for item in l]
-        flat_values.remove(flat_values[0])
 
         return flat_values
     except HttpError as err:
@@ -71,8 +71,9 @@ def get_order_IDs():
 
 # takes a two dimensional list object representing the updates for each cell
 # uses the google sheets api to post an update to the spreadsheet with all of the cell updates
-def write_updates_to_sheet(messages):
-    range = write_range
+def write_updates_to_sheet(messages, start):
+    
+    range = 'ekata_review!B' + start + ':K'
 
     try:
 
@@ -87,3 +88,33 @@ def write_updates_to_sheet(messages):
 def update_status(message):
     sheet.values().update(spreadsheetId=sheet_id, range=status_range,
                           valueInputOption='USER_ENTERED', body={'values':  {'values': f'{message}'}}).execute()
+
+
+#gets the combination of order id and zendesk ticket for the zendesk option
+def get_ss_info():
+
+    range = 'ekata_review_zendesk!A2:B'
+
+    try:
+        result = sheet.values().get(spreadsheetId=sheet_id,
+                                    range=range).execute()
+    except HttpError as err:
+        print(err)
+        return
+
+    values = result.get('values', [])
+
+    return values
+
+#updates the ekata check outcome for a single order (for zendesk script)
+def update_check_outcome(count, message):
+
+    range = 'ekata_review_zendesk!C' + str(count)
+
+    sheet.values().update(spreadsheetId=sheet_id, range=range,
+                          valueInputOption='USER_ENTERED', body={'values':  {'values': f'{message}'}}).execute()
+
+
+
+    
+    

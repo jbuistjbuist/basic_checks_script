@@ -11,9 +11,15 @@ class Order:
     # simple object method to return whether or not the shipping address is equal to the billing address.
     # since we are interested in checking names, the address is not considered equivalent if the first name is different
     def sa_equals_ba(self):
-        if self.billing_address == None or (self.billing_address.address == self.shipping_address.address and self.shipping_address.first_name == self.billing_address.first_name):
+        if self.billing_address == None or (self.billing_address.address == self.shipping_address.address):
             return True
         return False
+
+    def mb_equals_pp(self):
+        if (self.member_email == self.paypal_email):
+            return True
+        return False
+            
 
     # specifies what to print if you attempt to print an object instance to the console
     def __repr__(self):

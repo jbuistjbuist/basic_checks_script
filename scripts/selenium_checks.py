@@ -2,10 +2,10 @@
 import os
 
 # import the classes defined in the classes file
-from classes import *
+from scripts.classes import *
 
 # import function to update sheet with script status
-from google_sheets import update_status
+from scripts.google_sheets import update_status
 
 # selenium modules
 from selenium import webdriver
@@ -21,19 +21,18 @@ from selenium.common.exceptions import NoSuchElementException
 # function to pause the code for set num of seconds
 import time
 
+#import regular expressions module
+import re
+
 # import dotenv module to use env variables
 from dotenv import load_dotenv
 load_dotenv()
 
 # set driver options
 chrome_options = Options()
-chrome_options.add_argument('--start-maximized')
+chrome_options.add_argument("--window-size=1920,1080")
 chrome_options.add_argument('--headless')
 chrome_options.add_argument('--disable-notifications')
-
-# disable image loading to increase speed
-prefs = {"profile.managed_default_content_settings.images": 2}
-chrome_options.add_experimental_option("prefs", prefs)
 
 # initialize chrome driver and env variables
 chrome_drive = Service()
@@ -68,7 +67,7 @@ def initialize_webdriver():
     if driver.current_url == 'https://app.ekata.com/search':
         print('Ekata login OK')
     else:
-        print('Ekata login failed, may be failing captcha test, script quitting')
+        print('Ekata login failed, may be failing captcha test (try logging in manually in chrome before trying again), script quitting')
         update_status('Failed')
         quit()
 
@@ -96,7 +95,7 @@ def initialize_webdriver():
 
 
 # function to get info from Ekata, based on provided order details
-def get_ekata_info(order):
+def get_ekata_info(order, zendesk):
 
     try:
         # switch to correct window/tab and use the HTML base of the application as element to navigate
@@ -109,13 +108,14 @@ def get_ekata_info(order):
         paypal_email_check = None
 
         # if there is a paypal email, check it as well
-        if order.paypal_email:
-            paypal_email_check = 'PayPal ' + \
-                perform_email_check(order.paypal_email, app)
-            member_email_check = 'Member ' + member_email_check
+        if order.paypal_email and not order.mb_equals_pp():
+            paypal_email_check = perform_email_check(order.paypal_email, app)
+
+        if order.paypal_email and order.mb_equals_pp():
+            paypal_email_check = "MB = PP"
 
         if not paypal_email_check:
-            paypal_email_check = 'N/A'
+            paypal_email_check = ""
 
         sa_f_name = order.shipping_address.first_name
         sa_l_name = order.shipping_address.last_name
@@ -124,46 +124,102 @@ def get_ekata_info(order):
         ba_f_name = None
         ba_l_name = None
 
-        if order.billing_address:
+        if order.billing_address and (order.billing_address != 'error') and not order.sa_equals_ba():
             ba_f_name = order.billing_address.first_name
             ba_l_name = order.billing_address.last_name
+
 
         # perform check of shipping address
 
         sa_check = perform_address_check(
             order.shipping_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name)
 
-        multi_unit = sa_check[1]
+        sa_multi_unit = sa_check[1]
+        sa_street_view = sa_check[2]
         shipping_check = sa_check[0]
 
-        billing_check = 'N/A'
+        ba_multi_unit = ""
+        ba_street_view = ""
+        billing_check = "SA = BA"
 
-        if order.billing_address and not order.sa_equals_ba():
-            billing_check = perform_address_check(
-                order.billing_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name)[0]
+        if order.billing_address and (order.billing_address != 'error') and not order.sa_equals_ba():
+            ba_check = perform_address_check(
+                order.billing_address, app, sa_f_name, sa_l_name, ba_f_name, ba_l_name, cc_f_name, cc_l_name)
+            
+            ba_multi_unit = ba_check[1]
+            ba_street_view = ba_check[2]
+            billing_check = ba_check[0]
 
-        return [member_email_check, paypal_email_check, shipping_check, multi_unit, billing_check]
+        if order.billing_address == 'error':
+            billing_check = 'Error - Review Manually'
+
+
+        zillow_query_sa = "🔎"
+        zillow_ss_sa = "🔎"
+        zillow_query_ba = ''
+        zillow_ss_ba = ''
+
+        #if the SA is us or canada, generate a zillow link
+
+        if order.shipping_address.country == 'United States' or order.shipping_address.country == 'Canada':
+            
+            zillow_query_sa = make_zillow_link(order.shipping_address.address, order.shipping_address.postal_code)
+            zillow_ss_sa = f'=HYPERLINK("{zillow_query_sa}", "💸")'
+
+        #if theres a seperate BA, generate a zillow link if the BA is in US or Canada
+
+        if order.billing_address and (order.billing_address != 'error') and not order.sa_equals_ba():
+
+            if order.billing_address.country == 'United States' or order.billing_address.country == 'Canada':
+            
+                zillow_query_ba = make_zillow_link(order.billing_address.address, order.billing_address.postal_code)
+                zillow_ss_ba = f'=HYPERLINK("{zillow_query_ba}", "💸")'
+
+            else:
+                zillow_query_ba = '🔎'
+                zillow_ss_ba = '🔎'
+                
+
+        if zendesk:
+
+            return [member_email_check, paypal_email_check, shipping_check, sa_street_view, sa_multi_unit, zillow_query_sa, billing_check, ba_street_view, ba_multi_unit, zillow_query_ba]
+        
+        else:
+
+            return [member_email_check, paypal_email_check, shipping_check, sa_street_view, sa_multi_unit, zillow_ss_sa, billing_check, ba_street_view, ba_multi_unit, zillow_ss_ba]
 
     except Exception as e:
         print(e)
         return False
 
+#helper function to make a zillow search link from address line and postal code (put address and postal code together with hyphens, try to remove special characters, and add it to the url)
+def make_zillow_link(address, postal_code):
+    zillow_base_link = 'https://www.zillow.com/homes/'
+    zillow_search_raw = address + ' ' + postal_code
+    zillow_search_raw = re.sub(r"[,.#]", "", zillow_search_raw).strip()
+    zillow_search_term = zillow_search_raw.split(" ")
+    zillow_search_term = "-".join(zillow_search_term)
+    return zillow_base_link + zillow_search_term
+    
+
 
 # function to perform Ekata email check, for a given email and HTML section
 def perform_email_check(email, dom_section):
 
-    driver.implicitly_wait(5)
+    driver.implicitly_wait(8)
     dom_section.find_element(By.XPATH, "//a[text()='Email']").click()
 
-    form = dom_section.find_element(By.TAG_NAME, 'form')
-    email_input = form.find_element(By.ID, 'email')
-    email_input.send_keys(Keys.COMMAND, 'a')
-    email_input.send_keys(Keys.DELETE)
-    email_input.send_keys(email)
-    form.find_element(
-        By.CLASS_NAME, 'css-uw1vjm-StyledButton-primary').click()
-
     try:
+        
+        form = dom_section.find_element(By.TAG_NAME, 'form')
+        email_input = form.find_element(By.ID, 'email')
+        email_input.send_keys(Keys.COMMAND, 'a')
+        email_input.send_keys(Keys.DELETE)
+        email_input.send_keys(email)
+        form.find_element(
+            By.CLASS_NAME, 'css-uw1vjm-StyledButton-primary').click()
+
+    
         email_validity = dom_section.find_element(
             By.XPATH, '//div[2]/div[2]/div[2]').text
         online_presence_html = dom_section.find_element(
@@ -176,28 +232,27 @@ def perform_email_check(email, dom_section):
             time_ago = online_presence_html.find_element(
                 By.CLASS_NAME, 'e8160633').text
             online_presence = online_presence + f' ({time_ago})'
-            driver.implicitly_wait(5)
+            driver.implicitly_wait(8)
         except NoSuchElementException:
-            driver.implicitly_wait(5)
+            driver.implicitly_wait(8)
 
         creation = dom_section.find_element(By.XPATH, '//div[4]/div[2]').text
         domain_reputation = dom_section.find_element(
             By.XPATH, '//div[3]/div[4]/div[2]').text
 
-        return f'Validity: {email_validity}, Online Presence: {online_presence}, Creation: {creation}, Domain: {domain_reputation}'
+        return f'{email_validity}, {online_presence}, {creation}, {domain_reputation}'
 
     except NoSuchElementException:
-        return 'Err/Manual'
+        return 'Error - Please review manually'
 
 # function to check one address for multiunit, streetview link, and name matches
 
 
 def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, ba_f_name=None, ba_l_name=None, cc_f_name=None, cc_l_name=None):
 
-    driver.implicitly_wait(1)
+    driver.implicitly_wait(2.6)
     # navigate to the address page
-    dom_section.find_element(
-        By.CSS_SELECTOR, '.css-17zawny-MenuItem:nth-child(4) > a').click()
+    dom_section.find_element(By.XPATH, "//a[text()='Address']").click()
 
     # find the form and enter the information
     form = dom_section.find_element(By.TAG_NAME, 'form')
@@ -208,53 +263,76 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
     form.find_element(By.CSS_SELECTOR, 'button[type="submit"]').click()
 
     # initialize variables to be returned
-    street_view = None
+    street_view = ''
     sa_name_check = None
     ba_name_check = None
     cc_name_check = None
-    multi_unit = 'Err/Manual'
+    multi_unit = ''
 
+
+    # try to get street view and multi unit information first
+    try:
+        street_view = driver.find_element(
+                By.PARTIAL_LINK_TEXT, 'Street view').get_attribute('href')
+        street_view = f'=HYPERLINK("{street_view}", "📍")'
+    
+    except:
+        street_view = "🔎"
+
+    try:
+        driver.implicitly_wait(0)
+        multi_unit = driver.find_element(
+                By.CSS_SELECTOR, '.e81606331 .e81606327 > .e81606326:last-of-type > span:last-of-type').text
+
+        if multi_unit == "Multi-unit":
+            multi_unit = '🏬'
+            
+        elif multi_unit == "Single-unit":
+            multi_unit = '🏠'
+
+        else:
+            multi_unit = "🔎"
+            
+    except:
+        multi_unit = "🔎"
+            
     # return an error if error message appears
     try:
-        error = form.find_element(By.CLASS_NAME, 'e1u7f1f03').text
+        driver.implicitly_wait(0.5)
+        error = form.find_element(By.CLASS_NAME, 'css-1cxasnz-StyledErrorMessage').text
+        
         if error:
-            return [f'Error: {error}', multi_unit]
+            return [error, multi_unit, street_view]
 
      # if no error message, proceed with getting streetview url, multi unit information, and match information
     except:
 
-        result = dom_section.find_element(By.CLASS_NAME, 'e81606332')
+        result = None
 
-        # try to get street view info, if failed skip it
+        #try to get the container element of the results section, else return an error
+
         try:
-            street_view = result.find_element(
-                By.PARTIAL_LINK_TEXT, 'Street').get_attribute('href')
+            
+            result = dom_section.find_element(By.CLASS_NAME, 'e81606332')
+            
         except:
-            street_view = street_view
+            
+            return ['Error - Review Manually', multi_unit, street_view]
 
-        # page should be loaded by now, so change the wait time to increase speed of execution
-        driver.implicitly_wait(0)
-
-        # see if the page confirms whether the SA is multi-unit
-        try:
-            multi_unit = result.find_element(
-                By.CSS_SELECTOR, '.e81606327 > .e81606326:last-of-type > span:last-of-type').text
-        except:
-            multi_unit = multi_unit
 
         # get results section as a variable
         matches = dom_section.find_element(
             By.CSS_SELECTOR, '.e81606331:nth-of-type(2)')
 
         # just in case anything has not completely loaded
-        driver.implicitly_wait(1)
+        driver.implicitly_wait(2.4)
 
         # in this try block, we try to get a list of all the names matched by ekata for the address,
         # if these elements dont exist we say there is no subscriber info
         try:
-            matches.find_element(By.TAG_NAME, 'a')
+            matches.find_element(By.CSS_SELECTOR, '.css-1o61uci-PanelTitleContainer')
             names = []
-            driver.implicitly_wait(0)
+            driver.implicitly_wait(0.5)
 
             # see if there are any alternate names listed and save them to list of names
             try:
@@ -262,9 +340,10 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
                     By.CSS_SELECTOR, '.css-unmwr4-AlternateNames')
                 for name in alt_names:
                     try:
-                        raw_name = name.text
-                        formatted_name = format_name(raw_name, full_name=True)
-                        names.append(formatted_name)
+                        raw_names = name.text
+                        raw_names = raw_names.split(", ")
+                        for raw_name in raw_names:
+                            names.append(raw_name)
                     except:
                         continue
             except:
@@ -273,92 +352,141 @@ def perform_address_check(address, dom_section, sa_f_name=None, sa_l_name=None, 
             # check all the matches and save them to list of names
             try:
                 match_names = matches.find_elements(
-                    By.CSS_SELECTOR, 'a[href^="/entity?id=Person"]')
+                    By.CSS_SELECTOR, '.e81606329')
 
                 for name in match_names:
                     try:
                         raw_name = name.text
-                        formatted_name = format_name(raw_name, full_name=True)
-                        names.append(formatted_name)
+                        names.append(raw_name)
+                    except:
+                        continue
+            except:
+                'nothing'
+
+            try:
+                associated_names = matches.find_elements(
+                    By.CSS_SELECTOR, 'li')
+
+                for name in associated_names:
+                    try:
+                        raw_name = name.text
+                        names.append(raw_name)
                     except:
                         continue
 
-            except:
-                'nothing'
+            except Exception as e:
+                print(e)
 
             # for all the names gathered, check them against the shipping address name, credit card name, and billing address names to find matches.
             # matching on last name only is considered partial, and both first and last name is a full match.
             # matching on first name only is not considered a match
+            sa_done = False
+            ba_done = False
+            cc_done = False
+            
             for name in names:
-                if (name[1] == sa_l_name):
-                    sa_name_check = 'Shipping Name: Partial Match'
-                    if (name[0] == sa_f_name):
-                        sa_name_check = 'Shipping Name: Full Match'
+                
+                if not sa_done:
+                    result = search_match(sa_f_name, sa_l_name, name)
+                    if result:
+                        sa_name_check = f'SA Name: {result}'
+                        if result == 'F':
+                            sa_done = True
 
-                if ba_l_name:
-                    if (name[1] == ba_l_name):
-                        ba_name_check = 'Billing Name: Partial Match'
-                        if (name[0] == ba_f_name):
-                            ba_name_check = 'Billing Name: Full Match'
+                if ba_l_name and not ba_done:
+                    result = search_match(ba_f_name, ba_l_name, name)
+                    if result:
+                        ba_name_check = f'BA Name: {result}'
+                        if result == 'F':
+                            ba_done = True
 
-                if cc_l_name and (cc_l_name != 'name_parse_fail'):
-                    if (name[1] == cc_l_name):
-                        ba_name_check = 'Credit Card Name: Partial Match'
-                        if (name[0] == cc_f_name):
-                            cc_name_check = 'Credit Card Name: Full Match'
+
+                if cc_l_name and (cc_l_name != 'name_parse_fail') and not cc_done:
+                    result = search_match(cc_f_name, cc_l_name, name)
+                    if result:
+                        cc_name_check = f'CC Name: {result}'
+                        if result == 'F':
+                            cc_done = True
+
+                
+        
 
             # if a billing address name was not provided it is N/A
             if not ba_l_name:
-                ba_name_check = 'Billing Name: N/A'
+                ba_name_check = 'BA Name: X'
 
              # if a credit card name was not provided it is N/A
             if not cc_l_name:
-                cc_name_check = 'Credit Card Name: N/A'
+                cc_name_check = 'CC Name: X'
 
             # if the credit card name is 'name_parse_fail' this means that there is a credit card name, but it was not parsed successfully.
             # will need to review manually
             if (cc_l_name == 'name_parse_fail'):
-                cc_name_check = 'Credit Card Name: Review Manually'
+                cc_name_check = 'CC Name: M'
 
             # finally, if any of these still do not have a value, it means there was no match and no exceptions/exclusions apply
             if not ba_name_check:
-                ba_name_check = 'Billing Name: No Match'
+                ba_name_check = 'BA Name: N'
 
             if not cc_name_check:
-                cc_name_check = 'Credit Card Name: No Match'
+                cc_name_check = 'CC Name: N'
 
             if not sa_name_check:
-                sa_name_check = 'Shipping Address Name: No Match'
+                sa_name_check = 'SA Name: N'
 
-            # if a streetview link was successfully retrieved, format the output so it will produce linked text in google sheets
-            # otherwise, return the text without a link
-            if not street_view:
-                return [f'{sa_name_check}, {cc_name_check}, {ba_name_check}', multi_unit]
-            else:
-                return [f'=HYPERLINK("{street_view}", "{sa_name_check}, {cc_name_check}, {ba_name_check}")', multi_unit]
+            
+
+            #return all da info
+            
+            return [f'{sa_name_check} | {cc_name_check} | {ba_name_check}', multi_unit, street_view]
+        
 
         # if there were no results at all, return the below
         except:
-            return ['No Subscriber Info', multi_unit]
+
+            return["No Subscriber Info", multi_unit, street_view]
+            
+
+
+#function that uses regular expressions to match names from HQM to names from ekata
+def search_match(first_name, last_name, string_to_search):
+  last_name_match = re.search(f'(\ |\-){last_name}($|\ |,|\-)', string_to_search, re.I)
+  full_name_match = re.search(f'(^|\ ){first_name}\ {last_name}($|\ |,|\-)', string_to_search, re.I)
+  if not full_name_match:
+    full_name_match = re.search(f'(^|\ ){first_name}(\ |\-|,).*(\ |\-){last_name}($|\ |,|\-)', string_to_search, re.I)
+
+  if full_name_match:
+    return 'F'
+  elif last_name_match:
+    return 'P'
+  else:
+    return None
 
 
 # function to remove honorifics etc. from names, takes in name and boolean of whether it is a full name (first and last), or one name
-def format_name(name, full_name):
+def format_name(name, last_name=True):
     name = name.replace('Mr. ', '')
     name = name.replace('M. ', '')
     name = name.replace('Mrs. ', '')
+    name = name.replace('Rev. ', '')
     name = name.replace('Ms. ', '')
     name = name.replace('Dr. ', '')
     name = name.replace(' Jr.', '')
     name = name.replace(' II', '')
+    name = name.replace(' I', '')
+    name = name.replace(' III', '')
+    name = name.replace(' Sr.', '')
 
-    # if it is a full name, return a list with two elements. list[0] is the first name, list[1] is the last name.
-    # middle names / initials are not returned
-    if (full_name):
-        name = name.split(' ')
-        return [name[0].strip().lower(), name[len(name) - 1].strip().lower()]
+    name = name.strip()
+    name = re.split('\-|\ ', name)
+    if last_name:    
+        name = name[len(name) - 1]
     else:
-        return name.strip().lower()
+        name = name[0]
+
+    return name.strip().lower()
+
+                            
 
 
 # function which takes in an order id, and retrieves the order details for a provided order
@@ -370,7 +498,7 @@ def get_hqm_details(id):
         driver.switch_to.window(hqm_window)
         driver.get(
             f'https://hqm.ssense.com/customer-support/master-order/edit/{id}')
-        driver.implicitly_wait(15)
+        driver.implicitly_wait(25)
 
         # set member email, and initialize other details (to be filled in or left as none)
         member_email = driver.find_element(By.ID, 'incoice_memberemail').text
@@ -389,15 +517,15 @@ def get_hqm_details(id):
         # try to get shipping details, shipping fields can have c292 or c293 classes so check both
         try:
 
-            driver.implicitly_wait(1)
+            driver.implicitly_wait(0.2)
 
             first_name_html = shipping_field.find_element(
                 By.ID, 'c292_firstName')
             first_name = first_name_html.get_attribute('value')
-            first_name = format_name(first_name, full_name=False)
+            first_name = format_name(first_name, last_name=False)
             last_name = shipping_field.find_element(
                 By.ID, 'c292_lastName').get_attribute('value')
-            last_name = format_name(last_name, full_name=False)
+            last_name = format_name(last_name, last_name=True)
             address = shipping_field.find_element(
                 By.ID, 'c292_address').get_attribute('value')
             postal_code = shipping_field.find_element(
@@ -417,10 +545,10 @@ def get_hqm_details(id):
 
             first_name = shipping_field.find_element(
                 By.ID, 'c293_firstName').get_attribute('value')
-            first_name = format_name(first_name, full_name=False)
+            first_name = format_name(first_name, last_name=False)
             last_name = shipping_field.find_element(
                 By.ID, 'c293_lastName').get_attribute('value')
-            last_name = format_name(last_name, full_name=False)
+            last_name = format_name(last_name, last_name=True)
             address = shipping_field.find_element(
                 By.ID, 'c293_address').get_attribute('value')
             postal_code = shipping_field.find_element(
@@ -434,26 +562,59 @@ def get_hqm_details(id):
 
         # if billing not same as shipping, get the billing address details
         if not (driver.find_element(By.ID, 'sameAsShipping').is_selected()):
+            
+            #find this to make sure its loaded first
+            driver.find_element(By.ID, 'shipping-address-book-btn')
 
             billing_field = driver.find_element(
-                By.CSS_SELECTOR, '.billing.box-address')
+            By.CSS_SELECTOR, '.billing.box-address')
 
-            first_name = billing_field.find_element(
-                By.ID, 'c291_firstName').get_attribute('value')
-            first_name = format_name(first_name, full_name=False)
-            last_name = billing_field.find_element(
-                By.ID, 'c291_lastName').get_attribute('value')
-            last_name = format_name(last_name, full_name=False)
-            address = billing_field.find_element(
-                By.ID, 'c291_address').get_attribute('value')
-            postal_code = billing_field.find_element(
-                By.ID, 'c291_postalCode').get_attribute('value')
-            country_select = Select(billing_field.find_element(
-                By.ID, 'c291_countryID')).first_selected_option
-            country = country_select.text
+              # try to get billing details, billing fields can have c291 or c292 classes so check both
 
-            billing_address = Address(
-                address, country, postal_code, first_name, last_name)
+            driver.implicitly_wait(0.2)
+
+            try:
+
+                first_name = billing_field.find_element(
+                    By.ID, 'c291_firstName').get_attribute('value')
+                first_name = format_name(first_name, last_name=False)
+                last_name = billing_field.find_element(
+                    By.ID, 'c291_lastName').get_attribute('value')
+                last_name = format_name(last_name, last_name=True)
+                address = billing_field.find_element(
+                    By.ID, 'c291_address').get_attribute('value')
+                postal_code = billing_field.find_element(
+                    By.ID, 'c291_postalCode').get_attribute('value')
+                country_select = Select(billing_field.find_element(
+                    By.ID, 'c291_countryID')).first_selected_option
+                country = country_select.text
+
+                billing_address = Address(
+                    address, country, postal_code, first_name, last_name)
+
+                driver.implicitly_wait(15)
+                
+            except NoSuchElementException:
+
+                driver.implicitly_wait(15)
+
+                first_name = billing_field.find_element(
+                    By.ID, 'c292_firstName').get_attribute('value')
+                first_name = format_name(first_name, last_name=False)
+                last_name = billing_field.find_element(
+                    By.ID, 'c292_lastName').get_attribute('value')
+                last_name = format_name(last_name, last_name=True)
+                address = billing_field.find_element(
+                    By.ID, 'c292_address').get_attribute('value')
+                postal_code = billing_field.find_element(
+                    By.ID, 'c292_postalCode').get_attribute('value')
+                country_select = Select(billing_field.find_element(
+                    By.ID, 'c292_countryID')).first_selected_option
+                country = country_select.text
+
+                billing_address = Address(
+                    address, country, postal_code, first_name, last_name)
+                
 
         # determine if it is a paypal, applepay, or cc order and get the appropriate info from the payments table
         table = driver.find_element(
@@ -463,12 +624,15 @@ def get_hqm_details(id):
         if (pmt_type == 'table_payment_cc'):
 
             cc_full_name = table.find_element(
-                By.CSS_SELECTOR, 'tr:nth-child(2) > td:nth-child(5)').text
+                By.CSS_SELECTOR, 'tr:nth-of-type(2) > td:nth-child(5)').text
+    
             seperated = cc_full_name.split(' ')
             if (len(seperated) >= 2):
-                cc_name = format_name(cc_full_name, full_name=True)
-                cc_f_name = cc_name[0]
-                cc_l_name = cc_name[1]
+                
+                cc_f_name = seperated[0]
+                cc_l_name = seperated[len(seperated) - 1]
+                cc_f_name = format_name(cc_f_name, False)
+                cc_l_name = format_name(cc_l_name, True)
             else:
                 cc_f_name = 'name_parse_fail'
                 cc_l_name = 'name_parse_fail'
@@ -482,9 +646,8 @@ def get_hqm_details(id):
         return Order(member_email, shipping_address, billing_address=billing_address, paypal_email=paypal_email, cc_f_name=cc_f_name, cc_l_name=cc_l_name)
 
        # if anything goes wrong and is uncaught, return false and print a message
-    except:
-        print(
-            f'get_hqm_details function failed for order {id}, order is likely loading too slowly, or unable to locate some details in DOM')
+    except Exception as e:
+        print("getting order " + id + " details fail, will try up to three times and output a blank row if not done")
         return False
 
 
