@@ -28,7 +28,7 @@ Tech used: Google OAuth 2.0, Google API client for Python, Zenpy, Python 3.8.5, 
 NB: Do not change layout of spreadsheet without aligning first
 
 #### Troubleshooting 
-error that mentions chromedriver not on PATH may be because of the 
+Error that mentions chromedriver not on PATH may be because of the 
 location of chromedriver in the filesystem. if this happens, try putting 
 an instance of the chromedriver file in the basic_checks_script folder
 
