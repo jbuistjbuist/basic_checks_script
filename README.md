@@ -1,4 +1,4 @@
-# basic_checks_script
+# Basic Checks
 
 This script for manual reviews improves review efficiency by: 
 
